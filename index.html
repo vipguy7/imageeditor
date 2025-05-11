@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Thumbnail Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        @font-face {
+            font-family: 'Pyidaungsu';
+            src: url('https://github.com/myanmartools/pyidaungsu-font/raw/master/Pyidaungsu.ttf') format('truetype');
+        }
+
+        .myanmar-text {
+            font-family: 'Pyidaungsu', sans-serif;
+        }
+
+        .thumbnail-container {
+            position: relative;
+            width: 100%;
+            max-width: 1800px;
+            margin: 0 auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .thumbnail-canvas {
+            width: 100%;
+            height: auto;
+            border: 2px solid #e5e7eb;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .text-tool {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+        }
+
+        .text-tool.active {
+            outline: 2px dashed #3b82f6;
+        }
+
+        .text-tool-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #3b82f6;
+            bottom: -5px;
+            right: -5px;
+            cursor: nwse-resize;
+            border-radius: 50%;
+        }
+
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .tool-panel {
+            transition: all 0.3s ease;
+        }
+
+        .tool-panel.collapsed {
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Gradient overlay styles */
+        .gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Text stroke effect */
+        .text-stroke {
+            text-shadow: -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000;
+        }
+
+        /* Multiple vertical gradient overlays */
+        .multi-gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(0, 0, 0, 0.3) 0%,
+            rgba(0, 0, 0, 0.1) 20%,
+            rgba(0, 0, 0, 0) 40%,
+            rgba(0, 0, 0, 0) 60%,
+            rgba(0, 0, 0, 0.1) 80%,
+            rgba(0, 0, 0, 0.3) 100%);
+        }
+
+        /* Draggable handle */
+        .drag-handle {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            cursor: nwse-resize;
+            z-index: 10;
+        }
+
+        /* Rotation handle */
+        .rotate-handle {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            cursor: grab;
+            z-index: 10;
+        }
+
+        /* Scale handle */
+        .scale-handle {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -10px;
+            left: -10px;
+            cursor: nesw-resize;
+            z-index: 10;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Animated buttons */
+        .btn-animate {
+            transition: all 0.2s ease;
+            transform: translateY(0);
+        }
+
+        .btn-animate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input range styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* File upload styling */
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload input {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Panel transitions */
+        .panel-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Transform controls */
+        .transform-controls {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 4px;
+            padding: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 20;
+        }
+
+        .transform-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px;
+            border-radius: 4px;
+            background: #f1f1f1;
+            cursor: pointer;
+        }
+
+        .transform-btn:hover {
+            background: #e5e5e5;
+        }
+
+        /* Text edit input */
+        .text-edit-input {
+            position: absolute;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            overflow: hidden;
+            font-family: 'Pyidaungsu', sans-serif;
+            padding: 0;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* AI enhancement loading overlay */
+        .ai-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">Advanced Thumbnail Creator</h1>
+            <p class="text-gray-600">Create stunning thumbnails with AI enhancement and custom fonts</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Left Panel - Tools -->
+                <div class="w-full lg:w-1/3 p-6 bg-gray-50">
+                    <!-- Upload Section -->
+                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                        <h2 class="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                            <i class="fas fa-cloud-upload-alt text-blue-500 mr-2"></i>
+                            Upload Image
+                        </h2>
+                        <div
+                            class="file-upload flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                            <label for="imageUpload"
+                                class="cursor-pointer flex flex-col items-center">
+                                <i class="fas fa-image text-4xl text-blue-400 mb-2"></i>
+                                <span class="text-gray-600 font-medium">Choose an image</span>
+                                <span class="text-sm text-gray-400 mt-1">or drag and drop</span>
+                            </label>
+                        </div>
+                        <div class="mt-3 grid grid-cols-3 gap-2">
+                            <button id="removeImageBtn"
+                                class="py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
+                                disabled>
+                                <i class="fas fa-trash mr-1"></i> Remove
+                            </button>
+                            <button id="fitImageBtn"
+                                class="py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                                disabled>
+                                <i class="fas fa-expand mr-1"></i> Fit
+                            </button>
+                            <button id="aiEnhanceBtn"
+                                class="py-2 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 disabled:opacity-50 transition-colors"
+                                disabled>
+                                <i class="fas fa-magic mr-1"></i> AI Enhance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Font Upload Section -->
+                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                        <h2 class="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                            <i class="fas fa-font text-blue-500 mr-2"></i>
+                            Custom Font
+                        </h2>
+                        <div
+                            class="file-upload flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <input type="file" id="fontUpload" accept=".ttf,.otf,.woff,.woff2" class="hidden">
+                            <label for="fontUpload"
+                                class="cursor-pointer flex flex-col items-center">
+                                <i class="fas fa-file-upload text-2xl text-blue-400 mb-1"></i>
+                                <span class="text-sm text-gray-600 font-medium">Upload Font</span>
+                                <span class="text-xs text-gray-400 mt-1">.ttf, .otf, .woff</span>
+                            </label>
+                        </div>
+                        <div id="fontLoadingIndicator" class="hidden text-center mt-2 text-sm text-gray-600 flex items-center justify-center">
+                            <i class="fas fa-spinner spinner mr-2"></i> Loading font...
+                        </div>
+                        <div id="fontOptions" class="mt-3">
+                            <div class="flex items-center mb-2 text-gray-600 text-sm hidden"
+                                id="loadedFontNameContainer">
+                                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                Custom font loaded: <span id="loadedFontName" class="font-medium ml-1"></span>
+                            </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Font Family</label>
+                            <select id="fontFamily"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                <option value="Pyidaungsu">Pyidaungsu (Default)</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Text Tools Section -->
+                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                        <h2 class="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                            <i class="fas fa-font text-blue-500 mr-2"></i>
+                            Text Tools
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Text Content</label>
+                                <textarea id="myanmarText"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg myanmar-text focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                    placeholder="Enter your text here" rows="3"></textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
+                                    <input type="range" id="fontSize" min="10" max="100" value="24" class="w-full">
+                                    <div class="text-center text-sm text-gray-600 mt-1"><span
+                                            id="fontSizeValue">24</span>px</div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Font Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" id="fontColor" value="#ffffff"
+                                            class="w-10 h-10 rounded cursor-pointer">
+                                        <button id="randomColorBtn"
+                                            class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm">
+                                            <i class="fas fa-random text-gray-600"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Background</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" id="bgColor" value="#00000000"
+                                            class="w-10 h-10 rounded cursor-pointer">
+                                        <button id="transparentBgBtn"
+                                            class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm">
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Opacity</label>
+                                    <input type="range" id="textOpacity" min="0" max="100" value="100" class="w-full">
+                                    <div class="text-center text-sm text-gray-600 mt-1"><span
+                                            id="opacityValue">100</span>%</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Font Style</label>
+                                <div class="flex space-x-2">
+                                    <button id="boldBtn" class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 tooltip">
+                                        <i class="fas fa-bold"></i>
+                                        <span class="tooltiptext">Bold</span>
+                                    </button>
+                                    <button id="italicBtn" class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 tooltip">
+                                        <i class="fas fa-italic"></i>
+                                        <span class="tooltiptext">Italic</span>
+                                    </button>
+                                    <button id="underlineBtn" class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 tooltip">
+                                        <i class="fas fa-underline"></i>
+                                        <span class="tooltiptext">Underline</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Text Alignment</label>
+                                <div class="flex space-x-2">
+                                    <button id="alignLeftBtn"
+                                        class="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 tooltip">
+                                        <i class="fas fa-align-left"></i>
+                                        <span class="tooltiptext">Align Left</span>
+                                    </button>
+                                    <button id="alignCenterBtn"
+                                        class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 tooltip">
+                                        <i class="fas fa-align-center"></i>
+                                        <span class="tooltiptext">Align Center</span>
+                                    </button>
+                                    <button id="alignRightBtn"
+                                        class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 tooltip">
+                                        <i class="fas fa-align-right"></i>
+                                        <span class="tooltipttext">Align Right</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Text Effects</label>
+                                    <button id="toggleEffectsBtn" class="text-xs text-blue-500 hover:text-blue-600">
+                                        <i class="fas fa-chevron-down mr-1"></i> Show
+                                    </button>
+                                </div>
+
+                                <div id="effectsPanel" class="hidden space-y-3">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="flex items-center mb-1">
+                                                <input type="checkbox" id="outlineCheck" class="h-4 w-4 mr-2">
+                                                <label for="outlineCheck" class="text-sm">Outline</label>
+                                            </div>
+                                            <div class="flex items-center space-x-2 pl-6">
+                                                <input type="color" id="outlineColor" value="#000000" class="w-8 h-8"
+                                                    disabled>
+                                                <input type="range" id="outlineWidth" min="0" max="10" value="2"
+                                                    class="w-full" disabled>
+                                            </div>
+                                            <div class="pl-6 mt-2">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Outline
+                                                    Style</label>
+                                                <select id="outlineStyle"
+                                                    class="px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    disabled>
+                                                    <option value="solid">Solid</option>
+                                                    <option value="dashed">Dashed</option>
+                                                    <option value="dotted">Dotted</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center mb-1">
+                                                <input type="checkbox" id="shadowCheck" class="h-4 w-4 mr-2">
+                                                <label for="shadowCheck" class="text-sm">Shadow</label>
+                                            </div>
+                                            <div class="flex items-center space-x-2 pl-6">
+                                                <label class="text-xs text-gray-600">Color</label>
+                                                <input type="color" id="shadowColor" value="#000000" class="w-8 h-8"
+                                                    disabled>
+                                            </div>
+                                            <div class="pl-6 mt-2 grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">Blur
+                                                        Radius</label>
+                                                    <input type="range" id="shadowBlur" min="0" max="20" value="5"
+                                                        class="w-full" disabled>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-gray-700 mb-1">Offset
+                                                        (X, Y)</label>
+                                                    <div class="flex space-x-1"><input type="number" id="shadowOffsetX"
+                                                            placeholder="X"
+                                                            class="w-10 px-1 py-0.5 border rounded text-xs"
+                                                            disabled><input type="number" id="shadowOffsetY"
+                                                            placeholder="Y"
+                                                            class="w-10 px-1 py-0.5 border rounded text-xs"
+                                                            disabled></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Width</label>
+                                        <input type="range" id="maxWidth" min="100" max="1800" value="800"
+                                            class="w-full">
+                                        <div class="text-center text-sm text-gray-600 mt-1"><span
+                                                id="maxWidthValue">800</span>px</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="addTextBtn"
+                                class="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 btn-animate flex items-center justify-center">
+                                <i class="fas fa-plus mr-2"></i> Add Text to Thumbnail
+                            </button>
+                            <button id="updateTextBtn"
+                                class="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 btn-animate flex items-center justify-center hidden">
+                                <i class="fas fa-save mr-2"></i> Update Text
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Overlay Effects Section -->
+                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                        <h2 class="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                            <i class="fas fa-layer-group text-blue-500 mr-2"></i>
+                            Overlay Effects
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex items-center mb-1">
+                                    <input type="checkbox" id="gradientCheck" class="h-4 w-4 mr-2">
+                                    <label for="gradientCheck" class="text-sm">Gradient Overlay</label>
+                                </div>
+                                <div class="flex items-center space-x-2 pl-6">
+                                    <select id="gradientType"
+                                        class="px-2 py-1 border border-gray-300 rounded text-sm" disabled>
+                                        <option value="top">Top to Bottom</option>
+                                        <option value="bottom">Bottom to Top</option>
+                                        <option value="left">Left to Right</option>
+                                        <option value="right">Right to Left</option>
+                                        <option value="vignette">Vignette</option>
+                                        <option value="multi">Multiple Vertical</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="pl-6 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Color 1</label>
+                                    <input type="color" id="gradientColor1" value="#000000"
+                                        class="w-10 h-10 rounded cursor-pointer" disabled>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Color 2</label>
+                                    <input type="color" id="gradientColor2" value="#000000"
+                                        class="w-10 h-10 rounded cursor-pointer" disabled>
+                                </div>
+                            </div>
+                            <div class="pl-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gradient Opacity</label>
+                                <input type="range" id="gradientOpacity" min="0" max="100", value="50"
+                                    class="w-full" disabled>
+                                <div class="text-center text-sm text-gray-600 mt-1"><span
+                                        id="gradientOpacityValue">50</span>%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Thumbnail Preview -->
+                <div class="w-full lg:w-2/3 p-6">
+                    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-image text-blue-500 mr-2"></i>
+                                Thumbnail Preview
+                            </h2>
+                            <div class="flex items-center space-x-2">
+                                <button id="clearAllBtn"
+                                    class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm disabled:opacity-50"
+                                    disabled>
+                                    <i class="fas fa-trash-alt mr-1"></i> Clear All
+                                </button>
+                                <button id="downloadBtn"
+                                    class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 btn-animate disabled:opacity-50"
+                                    disabled>
+                                    <i class="fas fa-download mr-1"></i> Download
+                                </button>
+                                <!-- Undo/Redo Buttons -->
+                                <button id="undoBtn"
+                                    class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm disabled:opacity-50"
+                                    disabled>
+                                    <i class="fas fa-undo mr-1"></i> Undo
+                                </button>
+                                <button id="redoBtn"
+                                    class="px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm disabled:opacity-50"
+                                    disabled>
+                                    <i class="fas fa-redo mr-1"></i> Redo
+
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Text Reordering Controls -->
+                        <div class="flex items-center justify-center space-x-2 mb-4 hidden" id="reorderControls">
+                            <span class="text-sm text-gray-700">Layer:</span>
+                            <button id="bringForwardBtn"
+                                class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm tooltip disabled:opacity-50"
+                                disabled>
+                                <i class="fas fa-arrow-up"></i>
+                                <span class="tooltiptext">Bring Forward</span>
+                            </button>
+                            <button id="sendBackwardBtn"
+                                class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm tooltip disabled:opacity-50"
+                                disabled>
+                                <i class="fas fa-arrow-down"></i>
+                                <span class="tooltiptext">Send Backward</span>
+                            </button>
+                            <button id="bringToFrontBtn"
+                                class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm tooltip disabled:opacity-50"
+                                disabled>
+                                <i class="fas fa-angle-double-up"></i>
+                                <span class="tooltiptext">Bring to Front</span>
+                            </button>
+                            <button id="sendToBackBtn"
+                                class="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm tooltip disabled:opacity-50"
+                                disabled>
+                                <i class="fas fa-angle-double-down"></i>
+                                <span class="tooltiptext">Send to Back</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="thumbnail-container">
+                        <canvas id="thumbnailCanvas" class="thumbnail-canvas" width="800" height="450"></canvas>
+                        <div id="aiLoadingOverlay" class="ai-loading-overlay hidden">
+                            <i class="fas fa-spinner spinner text-4xl mb-2"></i>
+                            <p>Enhancing image with AI...</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-col sm:flex-row gap-4 items-center">
+                        <div class="w-full sm:w-auto">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Thumbnail Size</label>
+                            <select id="thumbnailSize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
+                                <option value="800x450">800x450 (16:9)</option>
+                                <option value="1280x720">1280x720 (HD)</option>
+                                <option value="1920x1080">1920x1080 (Full HD)</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+
+                        <div id="customSizeContainer" class="hidden w-full sm:w-auto">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Custom Size</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" id="customWidth" placeholder="Width"
+                                    class="w-20 px-2 py-1 border border-gray-300 rounded" min="100" max="4000">
+                                <span class="text-gray-500">×</span>
+                                <input type="number" id="customHeight" placeholder="Height"
+                                    class="w-20 px-2 py-1 border border-gray-300 rounded" min="100" max="4000">
+                            </div>
+                        </div>
+
+                        <button id="applySizeBtn"
+                            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 btn-animate mt-6 sm:mt-0">
+                            <i class="fas fa-check mr-1"></i> Apply Size
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h2 class="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                        <i class="fas fa-list text-blue-500 mr-2"></i>
+                        Text Elements
+                    </h2>
+                    <div class="space-y-2 max-h-60 overflow-y-auto" id="textElementsList">
+                        <div class="text-center py-4 text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i> No text elements added yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center text-gray-500 text-sm mt-8">
+        <p>© 2023 Advanced Thumbnail Creator | Made with <i class="fas fa-heart text-red-400"></i></p>
+    </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const canvas = document.getElementById('thumbnailCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageUpload = document.getElementById('imageUpload');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const fitImageBtn = document.getElementById('fitImageBtn');
+        const aiEnhanceBtn = document.getElementById('aiEnhanceBtn');
+        const aiLoadingOverlay = document.getElementById('aiLoadingOverlay');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const myanmarText = document.getElementById('myanmarText');
+        const fontSize = document.getElementById('fontSize');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        const fontColor = document.getElementById('fontColor');
+        const randomColorBtn = document.getElementById('randomColorBtn');
+        const bgColor = document.getElementById('bgColor');
+        const transparentBgBtn = document.getElementById('transparentBgBtn');
+        const textOpacity = document.getElementById('textOpacity');
+        const opacityValue = document.getElementById('opacityValue');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const updateTextBtn = document.getElementById('updateTextBtn');
+        const boldBtn = document.getElementById('boldBtn');
+        const italicBtn = document.getElementById('italicBtn');
+        const underlineBtn = document.getElementById('underlineBtn');
+        const alignLeftBtn = document.getElementById('alignLeftBtn');
+        const alignCenterBtn = document.getElementById('alignCenterBtn');
+        const alignRightBtn = document.getElementById('alignRightBtn');
+        const thumbnailSize = document.getElementById('thumbnailSize');
+        const customSizeContainer = document.getElementById('customSizeContainer');
+        const customWidth = document.getElementById('customWidth');
+        const customHeight = document.getElementById('customHeight');
+        const applySizeBtn = document.getElementById('applySizeBtn');
+        const outlineCheck = document.getElementById('outlineCheck');
+        const outlineColor = document.getElementById('outlineColor');
+        const outlineWidth = document.getElementById('outlineWidth');
+        const outlineStyle = document.getElementById('outlineStyle');
+        const shadowBlur = document.getElementById('shadowBlur');
+        const shadowOffsetX = document.getElementById('shadowOffsetX');
+        const shadowOffsetY = document.getElementById('shadowOffsetY');
+        const shadowCheck = document.getElementById('shadowCheck');
+        const shadowColor = document.getElementById('shadowColor');
+        const maxWidth = document.getElementById('maxWidth');
+        const maxWidthValue = document.getElementById('maxWidthValue');
+        const gradientCheck = document.getElementById('gradientCheck');
+        const gradientType = document.getElementById('gradientType');
+        const gradientColor1 = document.getElementById('gradientColor1');
+        const gradientColor2 = document.getElementById('gradientColor2');
+        const gradientOpacity = document.getElementById('gradientOpacity');
+        const gradientOpacityValue = document.getElementById('gradientOpacityValue');
+        const textElementsList = document.getElementById('textElementsList');
+        const toggleEffectsBtn = document.getElementById('toggleEffectsBtn');
+        const effectsPanel = document.getElementById('effectsPanel');
+        const fontUpload = document.getElementById('fontUpload');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const fontFamily = document.getElementById('fontFamily');
+        const fontLoadingIndicator = document.getElementById('fontLoadingIndicator');
+        const fontOptions = document.getElementById('fontOptions');
+        const loadedFontNameContainer = document.getElementById('loadedFontNameContainer');
+        const reorderControls = document.getElementById('reorderControls');
+        const bringForwardBtn = document.getElementById('bringForwardBtn');
+        const sendBackwardBtn = document.getElementById('sendBackwardBtn');
+        const bringToFrontBtn = document.getElementById('bringToFrontBtn');
+        // State variables
+        let uploadedImage = null;
+        let activeTextElement = null;
+        let textElements = [];
+        let isDragging = false;
+        let isResizing = false;
+        let isRotating = false;
+        let isScaling = false;
+        let isManipulating = false; // Flag to indicate any manipulation is in progress
+        let startX, startY;
+        let currentFontStyle = {
+            bold: false,
+            italic: false,
+            underline: false,
+            align: 'left',
+            outline: false,
+            outlineColor: '#000000',
+            outlineWidth: 2,
+            outlineStyle: 'solid',
+            shadowBlur: 5,
+            shadowOffset: {
+                x: 3,
+                y: 3
+            },
+            shadow: false,
+            shadowColor: '#000000',
+            maxWidth: 800,
+            fontFamily: 'Pyidaungsu'
+        };
+        let textEditInput = null;
+        let customFonts = {};
+        // Initialize canvas
+        let history = [];
+        let historyIndex = -1;
+
+        function initCanvas() {
+            ctx.fillStyle = 'white'; // Changed to white for better visibility
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Upload an image to start designing', canvas.width / 2, canvas.height / 2);
+            // Draw grid pattern
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            // Vertical lines
+            for (let x = 0; x <= canvas.width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            // Horizontal lines
+            for (let y = 0; y <= canvas.width; y += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.stroke();
+            }
+        }
+        initCanvas();
+        // Event Listeners
+        imageUpload.addEventListener('change', handleImageUpload);
+        removeImageBtn.addEventListener('click', removeImage);
+        fitImageBtn.addEventListener('click', fitImageToCanvas);
+        aiEnhanceBtn.addEventListener('click', enhanceImageWithAI);
+        downloadBtn.addEventListener('click', downloadThumbnail);
+        clearAllBtn.addEventListener('click', clearAllElements);
+        fontSize.addEventListener('input', updateFontSizeValue);
+        textOpacity.addEventListener('input', updateOpacityValue);
+        addTextBtn.addEventListener('click', addTextToCanvas);
+        updateTextBtn.addEventListener('click', updateTextElement);
+        boldBtn.addEventListener('click', toggleBold);
+        italicBtn.addEventListener('click', toggleItalic);
+        underlineBtn.addEventListener('click', toggleUnderline);
+        alignLeftBtn.addEventListener('click', () => setTextAlign('left'));
+        alignCenterBtn.addEventListener('click', () => setTextAlign('center'));
+        alignRightBtn.addEventListener('click', () => setTextAlign('right'));
+        thumbnailSize.addEventListener('change', handleThumbnailSizeChange);
+        applySizeBtn.addEventListener('click', applyCanvasSize);
+        outlineCheck.addEventListener('change', toggleOutline);
+        outlineColor.addEventListener('input', updateOutlineColor);
+        outlineWidth.addEventListener('input', updateOutlineWidth);
+        outlineStyle.addEventListener('change', updateOutlineStyle);
+        shadowBlur.addEventListener('input', updateShadowBlur);
+        shadowOffsetX.addEventListener('input', updateShadowOffset);
+        shadowOffsetY.addEventListener('input', updateShadowOffset);
+        shadowCheck.addEventListener('change', toggleShadow);
+        shadowColor.addEventListener('input', updateShadowColor);
+        maxWidth.addEventListener('input', updateMaxWidth);
+        gradientCheck.addEventListener('change', toggleGradient);
+        gradientType.addEventListener('change', redrawCanvas);
+        gradientColor1.addEventListener('input', redrawCanvas);
+        gradientColor2.addEventListener('input', redrawCanvas);
+        gradientOpacity.addEventListener('input', updateGradientOpacity);
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+        randomColorBtn.addEventListener('click', generateRandomColor);
+        bringForwardBtn.addEventListener('click', () => reorderTextElement('forward'));
+        sendBackwardBtn.addEventListener('click', () => reorderTextElement('backward'));
+        bringToFrontBtn.addEventListener('click', () => reorderTextElement('front'));
+        sendToBackBtn.addEventListener('click', () => reorderTextElement('back'));
+        transparentBgBtn.addEventListener('click', setTransparentBackground);
+        toggleEffectsBtn.addEventListener('click', toggleEffectsPanel);
+        fontUpload.addEventListener('change', handleFontUpload);
+        fontFamily.addEventListener('change', updateFontFamily);
+        // Canvas interaction
+        canvas.addEventListener('mousedown', handleCanvasMouseDown);
+        canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        canvas.addEventListener('mouseup', handleCanvasMouseUp);
+        canvas.addEventListener('mouseleave', handleCanvasMouseUp);
+        // History Management
+        function saveState() {
+            // Limit history size (optional)
+            const maxHistorySize = 20;
+            if (history.length > maxHistorySize) {
+                history.shift();
+                historyIndex--;
+            }
+            history = history.slice(0, historyIndex + 1);
+            history.push(JSON.stringify({
+                uploadedImageSrc: uploadedImage ? uploadedImage.src : null,
+                textElements: textElements
+            }));
+            historyIndex = history.length - 1;
+            updateHistoryButtons();
+        }
+        // Functions
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            // Show loading state
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner spinner mr-2"></i> Loading...';
+            downloadBtn.disabled = true;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const img = new Image();
+                img.onload = function () {
+                    uploadedImage = img;
+                    // Fit image to canvas size
+                    try {
+                        fitImageToCanvas();
+                        removeImageBtn.disabled = false;
+                        fitImageBtn.disabled = false;
+                        saveState(); // Save state after image upload
+                        aiEnhanceBtn.disabled = false;
+                        downloadBtn.disabled = false;
+                    } catch (error) {
+                        console.error("Error during fitImageToCanvas:", error);
+                        alert('Failed to draw image to canvas. See console for details.');
+                    } finally {
+                        downloadBtn.innerHTML = originalText;
+                        downloadBtn.disabled = false;
+                    }
+                };
+                img.onerror = function () {
+                    let errorMessage = 'Error loading image.';
+                    if (img.naturalWidth === 0) {
+                        errorMessage += ' The file might be corrupted or not a valid image.';
+                    } else {
+                        errorMessage += ' Please try another file.';
+                    }
+                    showAlert(errorMessage, 'error');
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = function () {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function fitImageToCanvas() {
+            if (!uploadedImage) return;
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Calculate scale to fill canvas while maintaining aspect ratio
+            const scale = Math.max(
+                canvas.width / uploadedImage.width,
+                canvas.height / uploadedImage.height
+            );
+            // Calculate dimensions to fill canvas
+            const width = uploadedImage.width * scale;
+            const height = uploadedImage.height * scale;
+            // Center the image
+            const x = (canvas.width - width) / 2;
+            const y = (canvas.height - height) / 2;
+            // Draw image
+            ctx.drawImage(uploadedImage, x, y, width, height);
+            // Apply gradient overlay if enabled
+            if (gradientCheck.checked) {
+                applyGradientOverlay();
+            }
+            // Redraw all text elements
+            redrawTextElements();
+        }
+
+        function removeImage() {
+            uploadedImage = null;
+            initCanvas();
+            saveState(); // Save state after image removal
+            redrawTextElements();
+            removeImageBtn.disabled = true;
+            fitImageBtn.disabled = true;
+            aiEnhanceBtn.disabled = true;
+            downloadBtn.disabled = textElements.length === 0;
+        }
+
+        function enhanceImageWithAI() {
+            if (!uploadedImage) return;
+            // Show loading overlay
+            aiLoadingOverlay.classList.remove('hidden');
+            // Simulate AI enhancement (in a real app, this would call an API)
+            setTimeout(() => {
+                // Create a temporary canvas for enhancement
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = uploadedImage.width;
+                tempCanvas.height = uploadedImage.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(uploadedImage, 0, 0);
+                // Apply some basic enhancements (simulated AI)
+                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                const data = imageData.data;
+                // Simple contrast and brightness adjustment
+                for (let i = 0; i < data.length; i += 4) {
+                    // Contrast adjustment
+                    const factor = 1.5;
+                    data[i] = factor * (data[i] - 128) + 128;
+                    data[i + 1] = factor * (data[i + 1] - 128) + 128;
+                    data[i + 2] = factor * (data[i + 2] - 128) + 128;
+                    // Brightness adjustment
+                    data[i] = Math.min(255, data[i] * 1.1);
+                    data[i + 1] = Math.min(255, data[i + 1] * 1.1);
+                    data[i + 2] = Math.min(255, data[i + 2] * 1.1);
+                    // Slight sharpening
+                    if (i > 0 && i < data.length - 8) {
+                        data[i] = Math.min(255, data[i] * 1.2 - data[i - 4] * 0.2);
+                        data[i + 1] = Math.min(255, data[i + 1] * 1.2 - data[i - 3] * 0.2);
+                        data[i + 2] = Math.min(255, data[i + 2] * 1.2 - data[i - 2] * 0.2);
+                    }
+                }
+                tempCtx.putImageData(imageData, 0, 0);
+                // Create new enhanced image
+                const enhancedImg = new Image();
+                enhancedImg.onload = function () {
+                    uploadedImage = enhancedImg;
+                    fitImageToCanvas();
+                    saveState(); // Save state after AI enhancement
+                    aiLoadingOverlay.classList.add('hidden');
+                    showAlert('Image enhanced successfully!', 'success');
+                };
+                enhancedImg.src = tempCanvas.toDataURL('image/jpeg', 0.9);
+            }, 2000);
+        }
+
+        function redrawCanvas() {
+            if (uploadedImage) {
+                fitImageToCanvas();
+            } else {
+                initCanvas();
+            }
+        }
+
+        function applyGradientOverlay() {
+            const opacity = gradientOpacity.value / 100;
+            const color1 = hexToRgba(gradientColor1.value, opacity);
+            const color2 = hexToRgba(gradientColor2.value, opacity);
+            if (gradientType.value === 'multi') {
+                // Apply multiple vertical gradient overlay
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                // Create multiple gradient layers
+                const gradient1 = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient1.addColorStop(0, color1);
+                gradient1.addColorStop(0.5, `rgba(${hexToRgb(gradientColor1.value)}, ${opacity * 0.2})`);
+                gradient1.addColorStop(1, color1);
+                const gradient2 = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient2.addColorStop(0, `rgba(${hexToRgb(gradientColor2.value)}, ${opacity * 0.4})`);
+                gradient2.addColorStop(0.3, `rgba(${hexToRgb(gradientColor2.value)}, ${opacity * 0.1})`);
+                gradient2.addColorStop(0.7, `rgba(${hexToRgb(gradientColor2.value)}, ${opacity * 0.1})`);
+                gradient2.addColorStop(1, `rgba(${hexToRgb(gradientColor2.value)}, ${opacity * 0.4})`);
+                // Draw first gradient
+                ctx.fillStyle = gradient1;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Draw second gradient with offset
+                ctx.fillStyle = gradient2;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            } else {
+                let gradient;
+                switch (gradientType.value) {
+                    case 'top':
+                        gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                        gradient.addColorStop(0, color1);
+                        gradient.addColorStop(1, color2);
+                        break;
+                    case 'bottom':
+                        gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+                        gradient.addColorStop(0, color1);
+                        gradient.addColorStop(1, color2);
+                        break;
+                    case 'left':
+                        gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+                        gradient.addColorStop(0, color1);
+                        gradient.addColorStop(1, color2);
+                        break;
+                    case 'right':
+                        gradient = ctx.createLinearGradient(canvas.width, 0, 0, 0);
+                        gradient.addColorStop(0, color1);
+                        gradient.addColorStop(1, color2);
+                        break;
+                    case 'vignette':
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2;
+                        const radius = Math.max(canvas.width, canvas.height) / 2;
+                        gradient = ctx.createRadialGradient(centerX, centerY, radius * 0.5, centerX, centerY, radius);
+                        gradient.addColorStop(0, color2);
+                        gradient.addColorStop(1, color1);
+                        break;
+                }
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+        }
+
+        function hexToRgba(hex, opacity) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `${r}, ${g}, ${b}`;
+        }
+
+        function redrawTextElements() {
+            textElements.forEach(text => {
+                drawTextElement(text);
+            });
+            updateTextElementsList();
+        }
+
+        function drawTextElement(text) {
+            ctx.save();
+            // Set font style
+            let fontStyle = '';
+            fontStyle += text.bold ? 'bold ' : '';
+            fontStyle += text.italic ? 'italic ' : '';
+            fontStyle += `${text.size}px `;
+            fontStyle += text.fontFamily || currentFontStyle.fontFamily;
+            ctx.font = fontStyle;
+            // Set text alignment
+            ctx.textAlign = text.align;
+            // Calculate text metrics with word wrap
+            const lines = wrapText(ctx, text.content, text.maxWidth);
+            const lineHeight = text.size * 1.2;
+            const textHeight = lines.length * lineHeight;
+            // Calculate total width (max line width)
+            let totalWidth = 0;
+            lines.forEach(line => {
+                const metrics = ctx.measureText(line);
+                if (metrics.width > totalWidth) {
+                    totalWidth = metrics.width;
+                }
+            });
+            // Calculate position based on alignment
+            let x = text.x;
+            if (text.align === 'center') {
+                x = text.x + totalWidth / 2;
+            } else if (text.align === 'right') {
+                x = text.x + totalWidth;
+            }
+            // Draw background if needed
+            if (text.bgColor !== 'transparent') {
+                const bgAlpha = parseInt(text.bgColor.slice(-2), 16) / 255;
+                ctx.fillStyle = text.bgColor.slice(0, -2) + '00)';
+                ctx.globalAlpha = bgAlpha;
+                const padding = 10;
+                const bgWidth = totalWidth + padding * 2;
+                const bgHeight = textHeight + padding * 2;
+                let bgX = text.x;
+                if (text.align === 'center') {
+                    bgX = text.x + (totalWidth - bgWidth) / 2;
+                } else if (text.align === 'right') {
+                    bgX = text.x + totalWidth - bgWidth;
+                }
+                ctx.fillRect(bgX, text.y - textHeight - padding / 2, bgWidth, bgHeight);
+            }
+            // Draw text with effects
+            ctx.fillStyle = text.color;
+            ctx.globalAlpha = text.opacity / 100;
+            // Draw shadow if enabled
+            if (text.shadow) {
+                ctx.shadowColor = text.shadowColor;
+                ctx.shadowBlur = text.shadowBlur;
+                ctx.shadowOffsetX = text.shadowOffset.x;
+                ctx.shadowOffsetY = text.shadowOffset.y;
+            }
+            else {
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            }
+            // Draw outline if enabled
+            if (text.outline) {
+                ctx.strokeStyle = text.outlineColor;
+                ctx.lineWidth = text.outlineWidth;
+                // Set line dash for outline style
+                if (text.outlineStyle === 'dashed') {
+                    ctx.setLineDash([5, 3]);
+                } else if (text.outlineStyle === 'dotted') {
+                    ctx.setLineDash([1, 2]);
+                } else {
+                    ctx.setLineDash([]);
+                }
+                // Draw each line with outline
+                lines.forEach((line, i) => {
+                    const y = text.y - (lines.length - 1 - i) * lineHeight;
+                    ctx.strokeText(line, x, y);
+                });
+                ctx.setLineDash([]); // Reset line dash
+            }
+            // Draw text
+            ctx.fillText(text.content, x, text.y);
+            // Draw underline if enabled
+            if (text.underline) {
+                ctx.strokeStyle = text.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const lastLineY = text.y;
+                ctx.moveTo(x - totalWidth / 2, lastLineY + 2);
+                ctx.lineTo(x + totalWidth / 2, lastLineY + 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+            // Draw outline and handles if active
+            if (text === activeTextElement) {
+                ctx.save();
+                ctx.strokeStyle = '#3b82f6'; // Blue outline for active element
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                // Calculate bounding box for wrapped text
+                const padding = 5;
+                const boxWidth = totalWidth + padding * 2;
+                const boxHeight = textHeight + padding * 2;
+                let boxX = text.x;
+                if (text.align === 'center') {
+                    boxX = text.x - boxWidth / 2;
+                } else if (text.align === 'right') {
+                    boxX = text.x - boxWidth;
+                }
+                ctx.strokeRect(boxX, text.y - textHeight - padding, boxWidth, boxHeight);
+                // Draw resize handle (bottom right)
+                const handleSize = 10;
+                const resizeHandleX = boxX + boxWidth - handleSize / 2;
+                const resizeHandleY = text.y + padding - handleSize / 2;
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(resizeHandleX - handleSize / 2, resizeHandleY - handleSize / 2, handleSize, handleSize);
+                // Draw rotate handle (top right)
+                const rotateHandleX = boxX + boxWidth - handleSize / 2;
+                const rotateHandleY = text.y - textHeight - padding - handleSize / 2;
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(rotateHandleX - handleSize / 2, rotateHandleY - handleSize / 2, handleSize, handleSize);
+                // Draw scale handle (bottom left)
+                const scaleHandleX = boxX + handleSize / 2;
+                const scaleHandleY = text.y + padding - handleSize / 2;
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(scaleHandleX - handleSize / 2, scaleHandleY - handleSize / 2, handleSize, handleSize);
+                ctx.restore();
+            }
+        }
+        // Function to wrap text based on max width
+        function wrapText(context, text, maxWidth) {
+            // Split by spaces and newlines
+            const words = text.split(/[\s\n]/);
+            const lines = [];
+            if (words.length === 0) return [""];
+            let currentLine = words[0];
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const width = context.measureText(currentLine + ' ' + word).width;
+                if (width < maxWidth) {
+                    currentLine += ' ' + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+        function addTextToCanvas() {
+            const content = myanmarText.value.trim();
+            if (!content) {
+                showAlert('Please enter some text first', 'warning');
+                return;
+            }
+            const textSize = parseInt(fontSize.value);
+            const color = fontColor.value;
+            const bg = bgColor.value === '#00000000' ? 'transparent' : bgColor.value + '00)';
+            const opacity = parseInt(textOpacity.value);
+            const maxWidthValue = parseInt(maxWidth.value);
+            const fontFamilyValue = fontFamily.value;
+            // Calculate initial position (centered)
+            ctx.font = `${currentFontStyle.bold ? 'bold ' : ''}${currentFontStyle.italic ? 'italic ' : ''}${textSize}px ${fontFamilyValue}`;
+            // Calculate text metrics with word wrap
+            const lines = wrapText(ctx, content, maxWidthValue);
+            const lineHeight = textSize * 1.2;
+            const textHeight = lines.length * lineHeight;
+            // Calculate total width (max line width)
+            let totalWidth = 0;
+            lines.forEach(line => {
+                const metrics = ctx.measureText(line);
+                if (metrics.width > totalWidth) {
+                    totalWidth = metrics.width;
+                }
+            });
+            const x = (canvas.width - totalWidth) / 2;
+            const y = (canvas.height + textHeight) / 2;
+            const textElement = {
+                id: Date.now(), // Unique ID for each text element
+                content,
+                x,
+                y,
+                width: totalWidth,
+                height: textHeight,
+                size: textSize,
+                color,
+                bgColor: bg,
+                opacity,
+                bold: currentFontStyle.bold,
+                italic: currentFontStyle.italic,
+                underline: currentFontStyle.underline,
+                align: currentFontStyle.align,
+                outline: outlineCheck.checked,
+                outlineColor: outlineColor.value,
+                outlineWidth: parseInt(outlineWidth.value),
+                outlineStyle: outlineStyle.value,
+                shadow: shadowCheck.checked,
+                shadowColor: shadowColor.value,
+                shadowBlur: parseInt(shadowBlur.value),
+                shadowOffset: {
+                    x: parseInt(shadowOffsetX.value),
+                    y: parseInt(shadowOffsetY.value)
+                },
+                maxWidth: maxWidthValue,
+                rotation: 0,
+                scale: 1,
+                fontFamily: fontFamilyValue
+            };
+            textElements.push(textElement);
+            activeTextElement = textElement;
+            redrawCanvas();
+            downloadBtn.disabled = false;
+            reorderControls.classList.remove('hidden');
+            saveState(); // Save state after adding text
+            clearAllBtn.disabled = false;
+            // Clear input
+            myanmarText.value = '';
+            // Show success message
+            showAlert('Text added to thumbnail!', 'success');
+        }
+
+        function updateTextElement() {
+            if (!activeTextElement) return;
+            const content = myanmarText.value.trim();
+            if (!content) {
+                showAlert('Please enter some text first', 'warning');
+                return;
+            }
+            // Update text element properties
+            activeTextElement.content = content;
+            activeTextElement.size = parseInt(fontSize.value);
+            activeTextElement.color = fontColor.value;
+            activeTextElement.bgColor = bgColor.value === '#00000000' ? 'transparent' : bgColor.value + '00)';
+            activeTextElement.opacity = parseInt(textOpacity.value);
+            activeTextElement.bold = currentFontStyle.bold;
+            activeTextElement.italic = currentFontStyle.italic;
+            activeTextElement.underline = currentFontStyle.underline;
+            activeTextElement.align = currentFontStyle.align;
+            activeTextElement.outline = outlineCheck.checked;
+            activeTextElement.outlineColor = outlineColor.value;
+            activeTextElement.outlineWidth = parseInt(outlineWidth.value);
+            activeTextElement.outlineStyle = outlineStyle.value;
+            activeTextElement.shadow = shadowCheck.checked;
+            activeTextElement.shadowColor = shadowColor.value;
+            activeTextElement.shadowBlur = parseInt(shadowBlur.value);
+            activeTextElement.shadowOffset = {
+                x: parseInt(shadowOffsetX.value),
+                y: parseInt(shadowOffsetY.value)
+            };
+            activeTextElement.maxWidth = parseInt(maxWidth.value);
+            activeTextElement.fontFamily = fontFamily.value;
+            // Recalculate dimensions
+            ctx.font = `${activeTextElement.bold ? 'bold ' : ''}${activeTextElement.italic ? 'italic ' : ''}${activeTextElement.size}px ${activeTextElement.fontFamily}`;
+            const lines = wrapText(ctx, activeTextElement.content, activeTextElement.maxWidth);
+            const lineHeight = activeTextElement.size * 1.2;
+            activeTextElement.height = lines.length * lineHeight;
+            // Calculate total width (max line width)
+            let totalWidth = 0;
+            lines.forEach(line => {
+                const metrics = ctx.measureText(line);
+                if (metrics.width > totalWidth) {
+                    totalWidth = metrics.width;
+                }
+            });
+            activeTextElement.width = totalWidth;
+            // Redraw canvas
+            redrawCanvas();
+            // Hide updatebutton and show add button
+            updateTextBtn.classList.add('hidden');
+            addTextBtn.classList.remove('hidden');
+            // Clear input
+            saveState(); // Save state after updating text
+            myanmarText.value = '';
+            // Show success message
+            showAlert('Text updated successfully!', 'success');
+        }
+
+        function handleCanvasMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            // Check if clicked on a text element
+            activeTextElement = null;
+            for (let i = textElements.length - 1; i >= 0; i--) {
+                const text = textElements[i];
+                const lineHeight = text.size * 1.2;
+                // Calculate bounding box for wrapped text
+                const padding = 5;
+                const boxWidth = text.width + padding * 2;
+                const boxHeight = text.height + padding * 2;
+                let boxX = text.x;
+                if (text.align === 'center') {
+                    boxX = text.x - boxWidth / 2;
+                } else if (text.align === 'right') {
+                    boxX = text.x - boxWidth;
+                }
+                // Check if clicked inside the text box
+                if (x >= boxX && x <= boxX + boxWidth &&
+                    y >= text.y - text.height - padding && y <= text.y + padding) {
+                    activeTextElement = text;
+                    // Check if clicked on resize handle (bottom right)
+                    // Calculate bounding box for handle
+                    const handleSize = 20; // Use a larger handle size for easier clicking
+                    const resizeHandleX = boxX + boxWidth - handleSize / 2;
+                    const resizeHandleY = text.y + padding - handleSize / 2;
+
+                    if (x >= resizeHandleX - handleSize / 2 && x <= resizeHandleX + handleSize / 2 &&
+                        y >= resizeHandleY - handleSize / 2 && y <= resizeHandleY + handleSize / 2) {
+                        isResizing = true;
+                    }
+                    // Check if clicked on rotate handle (top right)
+                    const rotateHandleX = boxX + boxWidth - handleSize / 2;
+                    const rotateHandleY = text.y - text.height - padding - handleSize / 2;
+                    if (x >= rotateHandleX - handleSize / 2 && x <= rotateHandleX + handleSize / 2 &&
+                        y >= rotateHandleY - handleSize / 2 && y <= rotateHandleY + handleSize / 2) {
+                        isRotating = true;
+                    }
+                    // Check if clicked on scale handle (bottom left)
+                    else if (x >= text.x - 10 && x <= text.x &&
+                        y >= text.y - 10 && y <= text.y) {
+                        isScaling = true;
+                    }
+                    else {
+                        isDragging = true;
+                        // Double click to edit text
+                        if (e.detail === 2) {
+                            editTextElement(text);
+                        }
+                    }
+                    startX = x;
+                    startY = y;
+                    break;
+                }
+            }
+            // Update UI controls based on active text element
+            if (activeTextElement) {
+                myanmarText.value = activeTextElement.content;
+                fontSize.value = activeTextElement.size;
+                fontSizeValue.textContent = activeTextElement.size;
+                fontColor.value = activeTextElement.color;
+                bgColor.value = activeTextElement.bgColor === 'transparent' ? '#00000000' : activeTextElement.bgColor;
+                textOpacity.value = activeTextElement.opacity;
+                opacityValue.textContent = activeTextElement.opacity;
+                // Update font style buttons
+                boldBtn.classList.toggle('bg-blue-200', activeTextElement.bold);
+                italicBtn.classList.toggle('bg-blue-200', activeTextElement.italic);
+                underlineBtn.classList.toggle('bg-blue-200', activeTextElement.underline);
+                // Update alignment buttons
+                setTextAlign(activeTextElement.align); // This function already toggles classes
+                // Update text effect controls
+                outlineCheck.checked = activeTextElement.outline;
+                outlineColor.value = activeTextElement.outlineColor;
+                outlineWidth.value = activeTextElement.outlineWidth;
+                outlineStyle.value = activeTextElement.outlineStyle;
+                shadowCheck.checked = activeTextElement.shadow;
+                shadowColor.value = activeTextElement.shadowColor;
+                shadowBlur.value = activeTextElement.shadowBlur;
+                shadowOffsetX.value = activeTextElement.shadowOffset.x;
+                shadowOffsetY.value = activeTextElement.shadowOffset.y;
+                maxWidth.value = activeTextElement.maxWidth;
+                maxWidthValue.textContent = activeTextElement.maxWidth;
+                toggleOutline(); // Update disabled state based on checkbox
+                toggleShadow(); // Update disabled state based on checkbox
+            }
+            redrawCanvas();
+            updateReorderButtons(); // Update reorder buttons state
+        }
+
+        function editTextElement(text) {
+            // Remove any existing edit input
+            if (textEditInput) {
+                textEditInput.remove();
+                textEditInput = null;
+            }
+            // Create text edit input
+            textEditInput = document.createElement('textarea');
+            textEditInput.className = 'text-edit-input';
+            textEditInput.style.fontFamily = text.fontFamily || currentFontStyle.fontFamily;
+            textEditInput.value = text.content;
+            textEditInput.style.fontSize = `${text.size}px`;
+            textEditInput.style.color = text.color;
+            textEditInput.style.fontWeight = text.bold ? 'bold' : 'normal';
+            textEditInput.style.fontStyle = text.italic ? 'italic' : 'normal';
+            textEditInput.style.textDecoration = text.underline ? 'underline' : 'none';
+            textEditInput.rows = 3; // Allow multiple lines
+            // Calculate position and size
+            const lineHeight = text.size * 1.2;
+            const lines = wrapText(ctx, text.content, text.maxWidth);
+            const textHeight = lines.length * lineHeight;
+            const padding = 5;
+            const boxWidth = text.width + padding * 2;
+            const boxHeight = textHeight + padding * 2;
+            let boxX = text.x;
+            if (text.align === 'center') {
+                boxX = text.x - boxWidth / 2;
+            } else if (text.align === 'right') {
+                boxX = text.x - boxWidth;
+            }
+            // Position the input
+            const canvasRect = canvas.getBoundingClientRect();
+            textEditInput.style.position = 'absolute';
+            textEditInput.style.left = `${canvasRect.left + boxX}px`;
+            textEditInput.style.top = `${canvasRect.top + text.y - textHeight - padding}px`;
+            textEditInput.style.width = `${boxWidth}px`;
+            textEditInput.style.height = `${boxHeight}px`;
+            // Add to document
+            document.body.appendChild(textEditInput);
+            textEditInput.focus();
+            // Handle input events
+            textEditInput.addEventListener('blur', function () {
+                if (textEditInput) {
+                    text.content = textEditInput.value;
+                    textEditInput.remove();
+                    textEditInput = null;
+                    redrawCanvas();
+                }
+                saveState(); // Save state after editing text
+            });
+            textEditInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    text.content = textEditInput.value;
+                    textEditInput.remove();
+                    textEditInput = null;
+                    redrawCanvas();
+                } else if (e.key === 'Escape') {
+                    textEditInput.remove();
+                    textEditInput = null;
+                    redrawCanvas();
+                }
+                saveState(); // Save state after editing text
+            });
+        }
+        function handleCanvasMouseMove(e) {
+            if (!isDragging && !isResizing && !isRotating && !isScaling) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            if (isDragging && activeTextElement) {
+                isManipulating = true;
+                // Move the text element
+                const dx = x - startX;
+                const dy = y - startY;
+                activeTextElement.x += dx;
+                activeTextElement.y += dy;
+                startX = x;
+                startY = y;
+            }
+            else if (isResizing && activeTextElement) {
+                isManipulating = true;
+                // Resize the text element (change font size proportionally)
+                const dy = startY - y;
+                const scale = 1 + dy / 50;
+                // Calculate new font size
+                let newSize = Math.max(10, Math.min(100, activeTextElement.size * scale));
+                if (newSize !== activeTextElement.size) {
+                    activeTextElement.size = newSize;
+                    const lines = wrapText(ctx, activeTextElement.content, activeTextElement.maxWidth);
+                    const lineHeight = activeTextElement.size * 1.2;
+                    activeTextElement.height = lines.length * lineHeight;
+                    // Calculate total width (max line width)
+                    let totalWidth = 0;
+                    lines.forEach(line => {
+                        const metrics = ctx.measureText(line);
+                        if (metrics.width > totalWidth) {
+                            totalWidth = metrics.width;
+                        }
+                    });
+                    activeTextElement.width = totalWidth;
+                    startY = y;
+                }
+            }
+            else if (isRotating && activeTextElement) {
+                isManipulating = true;
+                // Rotate the text element
+                const centerX = activeTextElement.x + activeTextElement.width / 2;
+                const centerY = activeTextElement.y - activeTextElement.height / 2;
+                const angle = Math.atan2(y - centerY, x - centerX) - Math.atan2(startY - centerY, startX - centerY);
+                activeTextElement.rotation += angle * (180 / Math.PI); // Convert to degrees
+                startX = x;
+                startY = y;
+                redrawCanvas(); // Redraw bounding box during rotate
+            }
+            else if (isScaling && activeTextElement) {
+                isManipulating = true;
+                // Scale the text element (change width proportionally)
+                const dx = x - startX;
+                const scale = 1 + dx / 100;
+                // Calculate new max width
+                let newMaxWidth = Math.max(50, Math.min(1800, activeTextElement.maxWidth * scale));
+                if (newMaxWidth !== activeTextElement.maxWidth) {
+                    activeTextElement.maxWidth = newMaxWidth;
+                    // Update font and recalculate width with word wrap
+                    ctx.font = `${activeTextElement.bold ? 'bold ' : ''}${activeTextElement.italic ? 'italic ' : ''}${activeTextElement.size}px ${activeTextElement.fontFamily}`;
+                    const lines = wrapText(ctx, activeTextElement.content, activeTextElement.maxWidth);
+                    const lineHeight = activeTextElement.size * 1.2;
+                    activeTextElement.height = lines.length * lineHeight;
+                    // Calculate total width (max line width)
+                    let totalWidth = 0;
+                    lines.forEach(line => {
+                        const metrics = ctx.measureText(line);
+                        if (metrics.width > totalWidth) {
+                            totalWidth = metrics.width;
+                        }
+                    });
+                    activeTextElement.width = totalWidth;
+                    startX = x;
+                    redrawCanvas(); // Redraw bounding box during scale
+                }
+            }
+            redrawCanvas(); // Redraw canvas during manipulation (only bounding box)
+        }
+        function handleCanvasMouseUp() {
+            isManipulating = false;
+            isDragging = false;
+            isResizing = false;
+            isRotating = false;
+            isScaling = false;
+            saveState(); // Save the state after the manipulation ends
+        }
+        canvas.addEventListener('mouseup', redrawCanvas); // Redraw the full canvas after manipulation ends
+        // Redraw canvas on mouseup to show full text element
+        function downloadThumbnail() {
+            // Show loading state
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner spinner mr-2"></i> Processing...';
+            downloadBtn.disabled = true;
+            // Create a temporary link
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.download = 'thumbnail-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                // Restore button state
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                // Show success message
+                showAlert('Thumbnail downloaded successfully!', 'success');
+            }, 100);
+        }
+
+        function clearAllElements() {
+            if (confirm('Are you sure you want to remove all text elements?')) {
+                textElements = [];
+                activeTextElement = null;
+                saveState(); // Save state after clearing all elements
+                redrawCanvas();
+                reorderControls.classList.add('hidden'); // Hide reorder controls
+                downloadBtn.disabled = !uploadedImage;
+                clearAllBtn.disabled = true;
+                // Show success message
+                showAlert('All text elements removed', 'info');
+            }
+        }
+
+        function updateFontSizeValue() {
+            fontSizeValue.textContent = fontSize.value;
+        }
+
+        function updateOpacityValue() {
+            opacityValue.textContent = textOpacity.value;
+        }
+
+        function toggleBold() {
+            currentFontStyle.bold = !currentFontStyle.bold;
+            boldBtn.classList.toggle('bg-blue-200', currentFontStyle.bold);
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.bold = currentFontStyle.bold;
+            }
+        }
+
+        function toggleItalic() {
+            currentFontStyle.italic = !currentFontStyle.italic;
+            italicBtn.classList.toggle('bg-blue-200', currentFontStyle.italic);
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.italic = currentFontStyle.italic;
+            }
+        }
+
+        function toggleUnderline() {
+            currentFontStyle.underline = !currentFontStyle.underline;
+            underlineBtn.classList.toggle('bg-blue-200', currentFontStyle.underline);
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.underline = currentFontStyle.underline;
+            }
+        }
+
+        function setTextAlign(align) {
+            currentFontStyle.align = align;
+            // Update button states
+            alignLeftBtn.classList.remove('bg-blue-200');
+            alignCenterBtn.classList.remove('bg-blue-200');
+            alignRightBtn.classList.remove('bg-blue-200');
+            if (align === 'left') {
+                alignLeftBtn.classList.add('bg-blue-200');
+            } else if (align === 'center') {
+                alignCenterBtn.classList.add('bg-blue-200');
+            } else if (align === 'right') {
+                alignRightBtn.classList.add('bg-blue-200');
+            }
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.align = align;
+            }
+        }
+
+        function toggleOutline() {
+            const enabled = outlineCheck.checked;
+            outlineColor.disabled = !enabled;
+            outlineWidth.disabled = !enabled;
+            currentFontStyle.outline = enabled;
+            outlineStyle.disabled = !enabled;
+
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.outline = enabled;
+                activeTextElement.outlineColor = outlineColor.value;
+                activeTextElement.outlineWidth = parseInt(outlineWidth.value);
+                activeTextElement.outlineStyle = outlineStyle.value;
+            }
+        }
+
+        function updateOutlineColor() {
+            currentFontStyle.outlineColor = outlineColor.value;
+            if (activeTextElement) {
+                activeTextElement.outlineColor = outlineColor.value;
+            }
+        }
+
+        function updateOutlineWidth() {
+            currentFontStyle.outlineWidth = parseInt(outlineWidth.value);
+            if (activeTextElement) {
+                activeTextElement.outlineWidth = parseInt(outlineWidth.value);
+            }
+        }
+
+        function toggleShadow() {
+            const enabled = shadowCheck.checked;
+            shadowColor.disabled = !enabled;
+            shadowBlur.disabled = !enabled;
+            shadowOffsetX.disabled = !enabled;
+            shadowOffsetY.disabled = !enabled;
+            currentFontStyle.shadow = enabled;
+
+            // If an element is active, update it immediately
+            if (activeTextElement) {
+                activeTextElement.shadow = enabled;
+                activeTextElement.shadowColor = shadowColor.value;
+                activeTextElement.shadowBlur = parseInt(shadowBlur.value);
+                activeTextElement.shadowOffset = {
+                    x: parseInt(shadowOffsetX.value),
+                    y: parseInt(shadowOffsetY.value)
+                };
+            }
+        }
+
+        function updateOutlineStyle() {
+            currentFontStyle.outlineStyle = outlineStyle.value;
+            if (activeTextElement) {
+                activeTextElement.outlineStyle = outlineStyle.value;
+            }
+        }
+
+        function updateShadowBlur() {
+            console.log('Updating shadow blur', shadowBlur.value);
+            currentFontStyle.shadowBlur = parseInt(shadowBlur.value);
+            if (activeTextElement) {
+                activeTextElement.shadowBlur = parseInt(shadowBlur.value);
+            }
+        }
+
+        function updateShadowOffset(e) {
+            console.log('Updating shadow offset');
+            currentFontStyle.shadowOffset.x = parseInt(shadowOffsetX.value);
+            currentFontStyle.shadowOffset.y = parseInt(shadowOffsetY.value);
+            console.log('New offset:', currentFontStyle.shadowOffset);
+            if (isNaN(currentFontStyle.shadowOffset.x)) currentFontStyle.shadowOffset.x = 0;
+            if (isNaN(currentFontStyle.shadowOffset.y)) currentFontStyle.shadowOffset.y = 0;
+            if (activeTextElement) {
+                 activeTextElement.shadowOffset = {
+                    x: parseInt(shadowOffsetX.value),
+                    y: parseInt(shadowOffsetY.value)
+                };
+                 updateTextElement();
+             }
+        }
+
+        function updateShadowColor() {
+            currentFontStyle.shadowColor = shadowColor.value;
+            if (activeTextElement) {
+                activeTextElement.shadowColor = shadowColor.value;
+            }
+        }
+
+        function updateMaxWidth() {
+            maxWidthValue.textContent = maxWidth.value;
+            currentFontStyle.maxWidth = parseInt(maxWidth.value);
+        }
+
+        function toggleGradient() {
+            const enabled = gradientCheck.checked;
+            gradientType.disabled = !enabled;
+            gradientColor1.disabled = !enabled;
+            gradientColor2.disabled = !enabled;
+            gradientOpacity.disabled = !enabled;
+            redrawCanvas();
+        }
+
+        function updateGradientOpacity() {
+            gradientOpacityValue.textContent = gradientOpacity.value;
+            redrawCanvas();
+        }
+
+        function generateRandomColor() {
+            const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16);
+            fontColor.value = randomColor;
+        }
+
+        function setTransparentBackground() {
+            bgColor.value = '#00000000';
+        }
+
+        function toggleEffectsPanel() {
+            effectsPanel.classList.toggle('hidden');
+            const icon = toggleEffectsBtn.querySelector('i');
+            if (effectsPanel.classList.contains('hidden')) {
+                toggleEffectsBtn.innerHTML = '<i class="fas fa-chevron-down mr-1"></i> Show';
+            } else {
+                toggleEffectsBtn.innerHTML = '<i class="fas fa-chevron-up mr-1"></i> Hide';
+            }
+        }
+
+        function handleFontUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            // Show loading indicator
+            fontLoadingIndicator.classList.remove('hidden');
+            fontFamily.disabled = true;
+            addTextBtn.disabled = true;
+            updateTextBtn.disabled = true;
+            loadedFontNameContainer.classList.add('hidden');
+            saveState(); // Save state before font upload (in case of error)
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const fontName = file.name.replace(/\.[^/.]+$/, ""); // Remove file extension
+                const fontFace = new FontFace(fontName, `url(${event.target.result})`);
+                fontFace.load().then(function (loadedFace) {
+                    document.fonts.add(loadedFace);
+                    customFonts[fontName] = loadedFace;
+                    // Add to font family dropdown
+                    const option = document.createElement('option');
+                    option.value = fontName;
+                    option.textContent = fontName;
+                    fontFamily.appendChild(option);
+                    // Select the new font if no text elements are selected
+                    if (!activeTextElement) {
+                        fontFamily.value = fontName;
+                        currentFontStyle.fontFamily = fontName; // Update state
+                    }
+                    // Show loaded font name
+                    document.getElementById('loadedFontName').textContent = fontName;
+                    loadedFontNameContainer.classList.remove('hidden');
+                    showAlert('Font loaded successfully!', 'success');
+                    fontLoadingIndicator.classList.add('hidden');
+                    fontFamily.disabled = false;
+                    addTextBtn.disabled = false;
+                    updateTextBtn.disabled = false;
+
+                }).catch(function (error) {
+                    fontLoadingIndicator.classList.add('hidden');
+                    fontFamily.disabled = false;
+                    addTextBtn.disabled = false;
+                    updateTextBtn.disabled = false;
+
+                    let errorMessage = 'Error loading font.';
+                    if (error.message.includes('network')) {
+                        errorMessage += ' Please check the font file URL or your network connection.';
+                    }
+                    showAlert('Error loading font: ' + error.message, 'error');
+                });
+            };
+            reader.readAsDataURL(file);
+            // Re-enable buttons after font load attempt
+        }
+
+        function updateFontFamily() {
+            currentFontStyle.fontFamily = fontFamily.value;
+            // If an element is selected, apply the font immediately
+            if (activeTextElement) {
+                updateTextElement(); // This will also redraw
+            } else {
+            }
+        }
+
+        function updateTextElementsList() {
+            textElementsList.innerHTML = '';
+            if (textElements.length === 0) {
+                textElementsList.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i> No text elements added yet
+                    </div>
+                `;
+                return;
+            }
+            textElements.forEach((text, index) => {
+                const element = document.createElement('div');
+                element.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mb-2';
+                const preview = document.createElement('div');
+                preview.className = 'truncate flex-1';
+                preview.style.fontFamily = text.fontFamily || currentFontStyle.fontFamily;
+                preview.textContent = text.content;
+                preview.style.fontSize = `${Math.min(16, text.size)}px`;
+                preview.style.color = text.color;
+                if (text.bold) preview.style.fontWeight = 'bold';
+                if (text.italic) preview.style.fontStyle = 'italic';
+                if (text.underline) preview.style.textDecoration = 'underline';
+                const buttons = document.createElement('div');
+                buttons.className = 'flex space-x-2';
+                const editBtn = document.createElement('button');
+                editBtn.className = 'px-2 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 tooltip';
+                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                editBtn.title = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    activeTextElement = text;
+                    redrawCanvas();
+                    // Update form with selected text properties
+                    myanmarText.value = text.content;
+                    fontSize.value = text.size;
+                    fontSizeValue.textContent = text.size;
+                    fontColor.value = text.color;
+                    bgColor.value = text.bgColor === 'transparent' ? '#00000000' : text.bgColor;
+                    textOpacity.value = text.opacity;
+                    opacityValue.textContent = text.opacity;
+                    // Update font styles
+                    currentFontStyle.bold = text.bold;
+                    currentFontStyle.italic = text.italic;
+                    currentFontStyle.underline = text.underline;
+                    currentFontStyle.align = text.align;
+                    boldBtn.classList.toggle('bg-blue-200', text.bold);
+                    italicBtn.classList.toggle('bg-blue-200', text.italic);
+                    underlineBtn.classList.toggle('bg-blue-200', text.underline);
+                    setTextAlign(text.align);
+                    // Update text effects
+                    outlineCheck.checked = text.outline;
+                    outlineColor.value = text.outlineColor;
+                    outlineWidth.value = text.outlineWidth;
+                    outlineStyle.value = text.outlineStyle;
+                    shadowCheck.checked = text.shadow;
+                    shadowColor.value = text.shadowColor;
+                    shadowBlur.value = text.shadowBlur;
+                    shadowOffsetX.value = text.shadowOffset.x;
+                    shadowOffsetY.value = text.shadowOffset.y;
+                    maxWidth.value = text.maxWidth;
+                    maxWidthValue.textContent = text.maxWidth;
+                    toggleOutline();
+                    toggleShadow();
+                    // Hide add button and show update button
+                    addTextBtn.classList.add('hidden');
+                    updateTextBtn.classList.remove('hidden');
+                });
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 tooltip';
+                deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                deleteBtn.title = 'Delete';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete this text element?')) {
+                        textElements = textElements.filter(t => t.id !== text.id);
+                        if (activeTextElement === text) {
+                            activeTextElement = null;
+                        }
+                        updateReorderButtons(); // Update reorder buttons state
+                        saveState(); // Save state after deleting text
+                        redrawCanvas();
+                        showAlert('Text element deleted successfully!', 'info');
+                    }
+                });
+                buttons.appendChild(editBtn);
+                buttons.appendChild(deleteBtn);
+                element.appendChild(preview);
+                element.appendChild(buttons);
+                textElementsList.appendChild(element);
+            });
+        }
+
+        function handleThumbnailSizeChange() {
+            const selectedSize = thumbnailSize.value;
+            if (selectedSize === 'custom') {
+                customSizeContainer.classList.remove('hidden');
+            } else {
+                customSizeContainer.classList.add('hidden');
+                // Extract width and height from selected size
+                const [width, height] = selectedSize.split('x').map(Number);
+                canvas.width = width;
+                canvas.height = height;
+                redrawCanvas();
+            }
+        }
+
+        function applyCanvasSize() {
+            const selectedSize = thumbnailSize.value;
+            if (selectedSize === 'custom') {
+                const width = parseInt(customWidth.value);
+                const height = parseInt(customHeight.value);
+                if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+                    showAlert('Please enter valid custom dimensions.', 'warning');
+                    return;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                saveState(); // Save state after applying custom size
+                redrawCanvas();
+            } else {
+                handleThumbnailSizeChange();
+            }
+        }
+
+        // Utility function to show alerts
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.createElement('div');
+            alertContainer.className = `fixed top-4 right-4 z-50 bg-${type === 'success' ? 'green' : type === 'warning' ? 'yellow' : 'blue'}-100 border border-${type === 'success' ? 'green' : type === 'warning' ? 'yellow' : 'blue'}-500 text-${type === 'success' ? 'green' : type === 'warning' ? 'yellow' : 'blue'}-700 px-4 py-3 rounded relative`;
+            alertContainer.innerHTML = `
+                <strong class="font-bold">${type.toUpperCase()}:</strong>
+                <span class="block sm:inline">${message}</span>
+            `;
+            document.body.appendChild(alertContainer);
+            // Automatically remove the alert after 3 seconds
+            setTimeout(() => {
+                document.body.removeChild(alertContainer);
+            }, 3000);
+        }
+        // Undo Functionality
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                loadState(history[historyIndex]);
+                updateHistoryButtons();
+            }
+        }
+        // Redo Functionality
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                loadState(history[historyIndex]);
+                updateHistoryButtons();
+            }
+        }
+        // Load State from History
+        function loadState(stateJson) {
+            const state = JSON.parse(stateJson);
+            textElements = state.textElements;
+            activeTextElement = null; // Deselect active element
+            // Reload background image if it exists
+            if (state.uploadedImageSrc) {
+                uploadedImage = new Image();
+                uploadedImage.onload = redrawCanvas;
+                uploadedImage.src = state.uploadedImageSrc;
+            } else {
+                uploadedImage = null;
+                redrawCanvas();
+            }
+            updateTextElementsList(); // Update the list display
+        }
+        // Update Undo/Redo button states
+        function reorderTextElement(action) {
+            if (!activeTextElement) return;
+            const currentIndex = textElements.indexOf(activeTextElement);
+            if (currentIndex === -1) return; // Should not happen
+            let newIndex = currentIndex;
+            switch (action) {
+                case 'forward':
+                    newIndex = Math.min(textElements.length - 1, currentIndex + 1);
+                    break;
+                case 'backward':
+                    newIndex = Math.max(0, currentIndex - 1);
+                    break;
+                case 'front':
+                    newIndex = textElements.length - 1;
+                    break;
+                case 'back':
+                    newIndex = 0;
+                    break;
+            }
+            if (newIndex !== currentIndex) {
+                // Remove the element from its current position
+                const [elementToMove] = textElements.splice(currentIndex, 1);
+                // Insert the element at the new position
+                textElements.splice(newIndex, 0, elementToMove);
+                saveState(); // Save state after reordering
+                redrawCanvas();
+                updateReorderButtons(); // Update button states after reordering
+            }
+        }
+        function updateReorderButtons() {
+            if (!activeTextElement) {
+                bringForwardBtn.disabled = true;
+                sendBackwardBtn.disabled = true;
+                bringToFrontBtn.disabled = true;
+                sendToBackBtn.disabled = true;
+                return;
+            }
+            const currentIndex = textElements.indexOf(activeTextElement);
+            if (currentIndex === -1) {
+                // Should not happen if activeTextElement is set correctly
+                bringForwardBtn.disabled = true;
+                sendBackwardBtn.disabled = true;
+                bringToFrontBtn.disabled = true;
+                sendToBackBtn.disabled = true;
+                return;
+            }
+            // Enable/disable buttons based on current index
+            bringForwardBtn.disabled = currentIndex === textElements.length - 1;
+            sendBackwardBtn.disabled = currentIndex === 0;
+            bringToFrontBtn.disabled = currentIndex === textElements.length - 1;
+            sendToBackBtn.disabled = currentIndex === 0;
+            // Show reorder controls if there is an active element
+            reorderControls.classList.remove('hidden');
+        }
+        // Update Undo/Redo button states
+        function updateHistoryButtons() {
+            undoBtn.disabled = historyIndex <= 0;
+            redoBtn.disabled = historyIndex >= history.length - 1;
+        }
+        // Initial save for the empty state
+        saveState();
+        // Initial redraw to show the grid
+        redrawCanvas();
+    </script>
+</body>
+
+</html>
