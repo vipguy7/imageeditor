@@ -997,30 +997,33 @@
         }
 
         function fitImageToCanvas() {
-            if (!uploadedImage) return;
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Calculate scale to fill canvas while maintaining aspect ratio
-            const scale = Math.max(
-                canvas.width / uploadedImage.width,
-                canvas.height / uploadedImage.height
-            );
-            // Calculate dimensions to fill canvas
-            const width = uploadedImage.width * scale;
-            const height = uploadedImage.height * scale;
-            // Center the image
-            const x = (canvas.width - width) / 2;
-            const y = (canvas.height - height) / 2;
-            // Draw image
-            ctx.drawImage(uploadedImage, x, y, width, height);
-            // Apply gradient overlay if enabled
-            if (gradientCheck.checked) {
-                applyGradientOverlay();
-            }
-            // Redraw all text elements
-            redrawTextElements();
-        }
+    if (!uploadedImage) return;
 
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Calculate best fit (contain) - maintain aspect ratio
+    const imgAspect = uploadedImage.width / uploadedImage.height;
+    const canvasAspect = canvas.width / canvas.height;
+    let drawWidth, drawHeight, offsetX, offsetY;
+
+    if (imgAspect > canvasAspect) {
+        // Image is wider than canvas
+        drawWidth = canvas.width;
+        drawHeight = canvas.width / imgAspect;
+        offsetX = 0;
+        offsetY = (canvas.height - drawHeight) / 2;
+    } else {
+        // Image is taller than canvas
+        drawHeight = canvas.height;
+        drawWidth = canvas.height * imgAspect;
+        offsetX = (canvas.width - drawWidth) / 2;
+        offsetY = 0;
+    }
+
+    ctx.drawImage(uploadedImage, offsetX, offsetY, drawWidth, drawHeight);
+    redrawCanvas();
+}
         function removeImage() {
             uploadedImage = null;
             initCanvas();
@@ -1080,12 +1083,24 @@
         }
 
         function redrawCanvas() {
-            if (uploadedImage) {
-                fitImageToCanvas();
-            } else {
-                initCanvas();
-            }
-        }
+    // Redraw the base image first
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (uploadedImage) {
+        fitImageToCanvas(); // Or your improved fit function
+    } else {
+        initCanvas();
+    }
+    // Draw all text elements
+    textElements.forEach(el => {
+        ctx.save();
+        ctx.globalAlpha = el.opacity !== undefined ? el.opacity / 100 : 1;
+        ctx.font = `${el.bold ? 'bold' : ''} ${el.italic ? 'italic' : ''} ${el.fontSize || 24}px ${el.fontFamily || 'Pyidaungsu'}`;
+        ctx.fillStyle = el.color || "#fff";
+        ctx.textAlign = el.align || "left";
+        ctx.fillText(el.text, el.x, el.y, el.maxWidth || 800);
+        ctx.restore();
+    });
+}
 
         function applyGradientOverlay() {
             const opacity = gradientOpacity.value / 100;
